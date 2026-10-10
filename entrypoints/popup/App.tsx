@@ -16,26 +16,20 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/components/theme-provider";
-
-type HistoryEntry = {
-  id: string;
-  title?: string;
-  url?: string;
-  lastVisitTime?: number;
-  visitCount?: number;
-};
+import { buildEdges } from "@/lib/edge-scoring";
+import { loadHistoryPages, type HistoryPage } from "@/lib/history";
 
 const colors = ["#8b5cf6", "#06b6d4", "#f97316", "#22c55e", "#ec4899", "#eab308"];
 const POPUP_ENTRY_LIMIT = 10;
 
-function pageLabel(entry: HistoryEntry) {
+function pageLabel(entry: HistoryPage) {
   try {
-    const url = new URL(entry.url!);
-    const title = entry.title?.trim();
+    const url = new URL(entry.url);
+    const title = entry.title.trim();
     if (title) return title.length > 28 ? `${title.slice(0, 27)}…` : title;
     return url.hostname.replace(/^www\./, "");
   } catch {
-    return entry.title ?? entry.url ?? "Unknown page";
+    return entry.title || entry.url || "Unknown page";
   }
 }
 
@@ -55,7 +49,7 @@ function App({ fullPage = false }: AppProps) {
   };
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<Sigma | null>(null);
-  const [entries, setEntries] = useState<HistoryEntry[]>([]);
+  const [entries, setEntries] = useState<HistoryPage[]>([]);
   const [days, setDays] = useState("7");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
@@ -67,14 +61,13 @@ function App({ fullPage = false }: AppProps) {
     setError(null);
     try {
       const startTime = fullPage ? Date.now() - Number(days) * 24 * 60 * 60 * 1000 : undefined;
-      const result = await browser.history.search({
-        text: fullPage ? query.trim() : "",
-        startTime,
-        maxResults: 160,
-      });
-      let historyEntries = result
-        .filter((item): item is HistoryEntry => Boolean(item.url && item.id))
-        .sort((a, b) => (b.lastVisitTime ?? 0) - (a.lastVisitTime ?? 0));
+      let historyEntries = (
+        await loadHistoryPages(browser.history, {
+          text: fullPage ? query.trim() : "",
+          startTime,
+          maxResults: 160,
+        })
+      ).sort((a, b) => (b.lastVisitTime ?? 0) - (a.lastVisitTime ?? 0));
 
       if (!fullPage) {
         const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
@@ -83,12 +76,12 @@ function App({ fullPage = false }: AppProps) {
           const currentEntry =
             historyEntries.find((entry) => entry.url === currentUrl) ??
             (
-              await browser.history.search({
+              await loadHistoryPages(browser.history, {
                 text: currentUrl,
                 startTime,
                 maxResults: 1,
               })
-            ).find((item): item is HistoryEntry => Boolean(item.url && item.id));
+            )[0];
 
           if (currentEntry) {
             historyEntries = [
@@ -122,29 +115,68 @@ function App({ fullPage = false }: AppProps) {
 
     const graph = new Graph();
     const pageMap = new Map(entries.map((entry) => [entry.id, entry]));
-    const branchFactor = 3;
-    const levels = entries.map((_, index) =>
-      index === 0
-        ? 0
-        : Math.floor(Math.log(index * (branchFactor - 1) + 1) / Math.log(branchFactor)),
-    );
-    const nodesByLevel = new Map<number, number[]>();
-    levels.forEach((level, index) => {
-      nodesByLevel.set(level, [...(nodesByLevel.get(level) ?? []), index]);
-    });
+    const edges = buildEdges(entries);
+    const neighbors = new Map<string, string[]>();
+    for (const entry of entries) neighbors.set(entry.id, []);
+    for (const edge of edges) {
+      neighbors.set(edge.source, [...(neighbors.get(edge.source) ?? []), edge.target]);
+      neighbors.set(edge.target, [...(neighbors.get(edge.target) ?? []), edge.source]);
+    }
+
+    const positions = new Map<string, { x: number; y: number }>();
+    const placed = new Set<string>();
+    const entryIndex = new Map(entries.map((entry, index) => [entry.id, index]));
+    const radialSpacing = 5;
+    let componentIndex = 0;
+
+    const placeBranch = (
+      node: string,
+      parent: string | undefined,
+      depth: number,
+      startAngle: number,
+      sweep: number,
+      centerX: number,
+      centerY: number,
+    ) => {
+      const angle = startAngle + sweep / 2;
+      positions.set(node, {
+        x: centerX + Math.cos(angle) * depth * radialSpacing,
+        y: centerY + Math.sin(angle) * depth * radialSpacing,
+      });
+      placed.add(node);
+
+      const children = (neighbors.get(node) ?? [])
+        .filter((candidate) => candidate !== parent && !placed.has(candidate))
+        .sort((left, right) => (entryIndex.get(left) ?? 0) - (entryIndex.get(right) ?? 0));
+      if (children.length === 0) return;
+
+      const childSweep = sweep / children.length;
+      children.forEach((child, index) => {
+        placeBranch(
+          child,
+          node,
+          depth + 1,
+          startAngle + index * childSweep,
+          childSweep,
+          centerX,
+          centerY,
+        );
+      });
+    };
+
+    for (const entry of entries) {
+      if (placed.has(entry.id)) continue;
+      const centerX = componentIndex === 0 ? 0 : componentIndex * radialSpacing * 4;
+      const centerY = componentIndex === 0 ? 0 : 0;
+      placeBranch(entry.id, undefined, 0, -Math.PI / 2, Math.PI * 2, centerX, centerY);
+      componentIndex += 1;
+    }
 
     entries.forEach((entry, index) => {
-      const level = levels[index] ?? 0;
-      const levelNodes = nodesByLevel.get(level) ?? [index];
-      const position = levelNodes.indexOf(index);
-      const angle =
-        level === 0 ? -Math.PI / 2 : -Math.PI / 2 + (position / levelNodes.length) * Math.PI * 2;
-      // Increase the radius with the number of nodes so adjacent nodes keep a clear gap.
-      const radius = level === 0 ? 0 : Math.max(level * 4, levelNodes.length * 3);
-
+      const position = positions.get(entry.id) ?? { x: index * 2, y: 0 };
       graph.addNode(entry.id, {
-        x: Math.cos(angle) * radius,
-        y: Math.sin(angle) * radius,
+        x: position.x,
+        y: position.y,
         size: Math.min(16, 7 + (entry.visitCount ?? 1)),
         color: isDark
           ? (colors[index % colors.length] ?? "#8b5cf6")
@@ -154,13 +186,12 @@ function App({ fullPage = false }: AppProps) {
         label: pageLabel(entry),
       });
     });
-    for (let index = 1; index < entries.length; index += 1) {
-      const child = entries[index];
-      const parentIndex = Math.floor((index - 1) / branchFactor);
-      const parent = entries[parentIndex];
-      if (child?.url && parent?.url && child.id !== parent.id && pageMap.has(parent.id)) {
-        graph.addEdge(parent.id, child.id, { size: 1.4, color: "#635b88" });
-      }
+    for (const edge of edges) {
+      graph.addEdge(edge.source, edge.target, {
+        size: Math.max(1, edge.score * 2),
+        color: edge.reference ? "#635b88" : themeColors.edge,
+        score: edge.score,
+      });
     }
 
     const renderer = new Sigma(graph, containerRef.current, {
