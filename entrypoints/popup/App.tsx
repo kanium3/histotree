@@ -294,10 +294,6 @@ function App({ fullPage = false }: AppProps) {
       }`}
     >
       <header className="flex items-center justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <p className="text-xs font-semibold tracking-[0.18em] text-primary">BROWSER MEMORY</p>
-          <h1 className="text-2xl font-semibold tracking-tight">Histotree</h1>
-        </div>
         <div className="flex items-center gap-2">
           {!fullPage && (
             <Button

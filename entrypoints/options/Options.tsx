@@ -66,10 +66,9 @@ function Options() {
               <Settings className="size-5" aria-hidden="true" />
             </div>
             <div className="flex flex-col gap-1">
-              <p className="text-xs font-semibold tracking-[0.18em] text-primary">BROWSER MEMORY</p>
               <h1 className="text-3xl font-semibold tracking-tight">設定</h1>
               <p className="text-sm text-muted-foreground">
-                Histotree の表示方法と履歴グラフの初期値を変更できます。
+                表示方法と履歴グラフの初期値を変更できます。
               </p>
             </div>
           </div>
@@ -88,7 +87,7 @@ function Options() {
           <Card>
             <CardHeader>
               <CardTitle>表示</CardTitle>
-              <CardDescription>Histotree 全体で使う外観を選択します。</CardDescription>
+              <CardDescription>全体で使う外観を選択します。</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col gap-2">
