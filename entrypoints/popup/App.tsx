@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import Graph from "graphology";
 import Sigma from "sigma";
 import { ExternalLink, Moon, RefreshCw, Search, Settings, Sun } from "lucide-react";
@@ -50,8 +50,9 @@ function App({ fullPage = false }: AppProps) {
   };
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<Sigma | null>(null);
+  const settings = use(loadSettings());
   const [entries, setEntries] = useState<HistoryPage[]>([]);
-  const [days, setDays] = useState<HistoryDays>(() => loadSettings().historyDays);
+  const [days, setDays] = useState<HistoryDays>(settings.historyDays);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -356,7 +357,15 @@ function App({ fullPage = false }: AppProps) {
               aria-label="サイトやページを検索"
             />
           </div>
-          <Select value={days} onValueChange={(value) => setDays(value ?? "7")}>
+          <Select
+            value={String(days)}
+            onValueChange={(value) => {
+              const nextDays = Number(value);
+              if (nextDays === 1 || nextDays === 7 || nextDays === 30 || nextDays === 365) {
+                setDays(nextDays);
+              }
+            }}
+          >
             <SelectTrigger className="h-9 w-[106px]" aria-label="期間">
               <SelectValue />
             </SelectTrigger>

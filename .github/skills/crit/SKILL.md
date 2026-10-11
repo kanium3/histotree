@@ -22,6 +22,7 @@ crit --mr <iid|url>            # GitLab MR (range mode)
 crit --range <base>..<head>    # commit range (range mode)
 crit                           # no args → branch diff
 ```
+
 If no arguments, check conversation context:
 
 1. A plan file was written earlier in this conversation → `crit <plan-file>`
@@ -64,6 +65,7 @@ If a crit server is already running from earlier in this conversation, `crit` au
 When `crit` completes, read **stdout** and follow its instructions. Check **stderr** for `approved: true` or `approved: false`.
 
 When a comment has `quote`, `anchor`, or `drifted`:
+
 - `quote`: the specific text the reviewer selected — focus your changes on the quoted text rather than the entire line range
 - `anchor`: use it to locate the current position of the content; line numbers may be stale after edits
 - `drifted: true`: original content was removed or heavily rewritten — line numbers are approximate at best

@@ -47,8 +47,6 @@ crit pull --session <id>
 
 The JSON status output exposes the candidates in `sessions`.
 
-
-
 ## Review file format
 
 ```json
@@ -88,6 +86,7 @@ The JSON status output exposes the candidates in `sessions`.
 ```
 
 Field rules:
+
 - `resolved`: `false` or **missing** — both mean unresolved. Only `true` means resolved.
 - `quote` (optional): the specific text the reviewer selected — narrows scope within the line range. Focus changes on the quoted text rather than the entire range.
 - `anchor` (line comments): full text of the commented lines when placed. When edits shift line numbers, locate content by anchor rather than trusting `start_line`/`end_line`.
@@ -116,6 +115,7 @@ crit comment --reply-to <id> --author 'Copilot' '<body>'
 ```
 
 Hard rules:
+
 - **Always pass `--author 'Copilot'`** (or your agent name) so comments are attributed correctly.
 - **Always single-quote the body** — double quotes break on backticks and shell metachars.
 - **Line numbers reference the file on disk** (1-indexed), not diff line numbers.
@@ -149,18 +149,18 @@ crit comment --json --file /tmp/crit-bulk.json --author 'GitHub Copilot'
 
 Per-entry schema:
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `file` / `path` | string | line/file comments | Relative path. `path` alone (no `line`) → file-level. |
-| `line` | int/string | line comments | `42` or `"45-47"` |
-| `end_line` | int | optional | Defaults to `line` |
-| `body` | string | always | |
-| `author` | string | optional | Per-entry override; falls back to `--author` |
-| `scope` | string | optional | `"review"` / `"file"` — usually inferred |
-| `reply_to` | string | replies | Comment ID (`c_…` or `r_…`) |
-| `resolve` | bool | optional | Only when user explicitly asks |
-| `quote` | string | optional | Line comments only: the exact text the comment is about, when it is part of the lines |
-| `quote_offset` | int | optional | Where `quote` starts in the lines' text, whitespace collapsed (as the web UI records it); needs `quote` |
+| Field           | Type       | Required           | Notes                                                                                                   |
+| --------------- | ---------- | ------------------ | ------------------------------------------------------------------------------------------------------- |
+| `file` / `path` | string     | line/file comments | Relative path. `path` alone (no `line`) → file-level.                                                   |
+| `line`          | int/string | line comments      | `42` or `"45-47"`                                                                                       |
+| `end_line`      | int        | optional           | Defaults to `line`                                                                                      |
+| `body`          | string     | always             |                                                                                                         |
+| `author`        | string     | optional           | Per-entry override; falls back to `--author`                                                            |
+| `scope`         | string     | optional           | `"review"` / `"file"` — usually inferred                                                                |
+| `reply_to`      | string     | replies            | Comment ID (`c_…` or `r_…`)                                                                             |
+| `resolve`       | bool       | optional           | Only when user explicitly asks                                                                          |
+| `quote`         | string     | optional           | Line comments only: the exact text the comment is about, when it is part of the lines                   |
+| `quote_offset`  | int        | optional           | Where `quote` starts in the lines' text, whitespace collapsed (as the web UI records it); needs `quote` |
 
 Scope inference (when `scope` omitted): has `reply_to` → reply; no `file`/`path` and no `line` → review-level; `path` but no `line` → file-level; `file`/`path` + `line` → line.
 

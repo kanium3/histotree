@@ -7,8 +7,10 @@ import { ThemeProvider } from "@/components/theme-provider.tsx";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <ThemeProvider>
-      <App />
-    </ThemeProvider>
+    <React.Suspense fallback={null}>
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
+    </React.Suspense>
   </React.StrictMode>,
 );

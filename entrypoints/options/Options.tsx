@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { use, useState } from "react";
 import { ExternalLink, Moon, Settings, Sun } from "lucide-react";
 import {
   AlertDialog,
@@ -31,30 +31,37 @@ import { useTheme } from "@/components/theme-provider";
 import { defaultSettings, loadSettings, saveSettings, type HistoryDays } from "@/lib/settings";
 
 const historyDayOptions: { value: HistoryDays; label: string }[] = [
-  { value: "1", label: "今日" },
-  { value: "7", label: "7日間" },
-  { value: "30", label: "30日間" },
-  { value: "365", label: "1年間" },
+  { value: 1, label: "今日" },
+  { value: 7, label: "7日間" },
+  { value: 30, label: "30日間" },
+  { value: 365, label: "1年間" },
 ];
 
 function Options() {
   const { theme, setTheme } = useTheme();
-  const [historyDays, setHistoryDays] = useState<HistoryDays>(() => loadSettings().historyDays);
+  const settings = use(loadSettings());
+  const [historyDays, setHistoryDays] = useState<HistoryDays>(settings.historyDays);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
-  const updateHistoryDays = (value: string | null) => {
-    if (value !== "1" && value !== "7" && value !== "30" && value !== "365") {
+  const updateHistoryDays = async (value: string | null) => {
+    const nextHistoryDays = Number(value);
+    if (
+      nextHistoryDays !== 1 &&
+      nextHistoryDays !== 7 &&
+      nextHistoryDays !== 30 &&
+      nextHistoryDays !== 365
+    ) {
       return;
     }
-    const nextHistoryDays = value as HistoryDays;
-    setHistoryDays(nextHistoryDays);
-    saveSettings({ historyDays: nextHistoryDays });
+    const nextSettings = { historyDays: nextHistoryDays as HistoryDays };
+    setHistoryDays(nextSettings.historyDays);
+    await saveSettings(nextSettings);
   };
 
-  const resetSettings = () => {
+  const resetSettings = async () => {
     setHistoryDays(defaultSettings.historyDays);
-    saveSettings(defaultSettings);
-    setTheme("system");
+    await saveSettings(defaultSettings);
+    await setTheme("system");
   };
 
   return (
@@ -133,7 +140,7 @@ function Options() {
                 <label htmlFor="history-days" className="text-sm font-medium">
                   初期表示期間
                 </label>
-                <Select value={historyDays} onValueChange={updateHistoryDays}>
+                <Select value={String(historyDays)} onValueChange={updateHistoryDays}>
                   <SelectTrigger id="history-days" className="w-full sm:w-[260px]">
                     <SelectValue />
                   </SelectTrigger>

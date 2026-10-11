@@ -87,6 +87,7 @@ When `crit` completes, read **stdout** and follow its instructions. Check **stde
 If the finish prompt says the review is approved / `"approved": true`, tell the user no changes were requested and stop.
 
 When a comment has `quote`, `anchor`, or `drifted`:
+
 - `quote`: the specific text the reviewer selected — focus your changes on the quoted text rather than the entire line range
 - `anchor`: use it to locate the current position of the content; line numbers may be stale after edits
 - `drifted: true`: original content was removed or heavily rewritten — line numbers are approximate at best

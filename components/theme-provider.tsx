@@ -1,37 +1,47 @@
 import { createContext, useContext, useEffect, useState } from "react";
-
-type Theme = "dark" | "light" | "system";
+import { defaultTheme as fallbackTheme, themeItem, type Theme } from "@/lib/settings";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
   defaultTheme?: Theme;
-  storageKey?: string;
 };
 
 type ThemeProviderState = {
   theme: Theme;
   resolvedTheme: "dark" | "light";
-  setTheme: (theme: Theme) => void;
+  setTheme: (theme: Theme) => Promise<void>;
 };
 
 const initialState: ThemeProviderState = {
   theme: "system",
   resolvedTheme: "light",
-  setTheme: () => null,
+  setTheme: async () => {},
 };
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({
   children,
-  defaultTheme = "system",
-  storageKey = "vite-ui-theme",
+  defaultTheme = fallbackTheme,
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme,
-  );
+  const [theme, setThemeState] = useState<Theme>(defaultTheme);
   const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">("light");
+
+  useEffect(() => {
+    let active = true;
+    themeItem.getValue().then((storedTheme) => {
+      if (active) setThemeState(storedTheme ?? defaultTheme);
+    });
+    const unwatch = themeItem.watch((nextTheme) => {
+      setThemeState(nextTheme ?? defaultTheme);
+    });
+
+    return () => {
+      active = false;
+      unwatch();
+    };
+  }, [defaultTheme]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -57,9 +67,9 @@ export function ThemeProvider({
   const value = {
     theme,
     resolvedTheme,
-    setTheme: (nextTheme: Theme) => {
-      localStorage.setItem(storageKey, nextTheme);
-      setTheme(nextTheme);
+    setTheme: async (nextTheme: Theme) => {
+      await themeItem.setValue(nextTheme);
+      setThemeState(nextTheme);
     },
   };
 

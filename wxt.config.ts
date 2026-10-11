@@ -8,7 +8,7 @@ export default defineConfig({
   manifest: {
     name: "Histotree",
     description: "Browse your history as a network graph.",
-    permissions: ["history", "tabs"],
+    permissions: ["history", "storage", "tabs"],
   },
   vite: () => ({
     plugins: [tailwindcss()],

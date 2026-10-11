@@ -1,34 +1,42 @@
-export type HistoryDays = "1" | "7" | "30" | "365";
+import { storage } from "#imports";
+
+export type HistoryDays = 1 | 7 | 30 | 365;
 
 export type HistotreeSettings = {
   historyDays: HistoryDays;
 };
 
-export const SETTINGS_STORAGE_KEY = "histotree-settings";
+export type Theme = "dark" | "light" | "system";
 
 export const defaultSettings: HistotreeSettings = {
-  historyDays: "7",
+  historyDays: 7,
 };
 
-export function loadSettings(): HistotreeSettings {
-  try {
-    const stored = JSON.parse(
-      localStorage.getItem(SETTINGS_STORAGE_KEY) ?? "null",
-    ) as Partial<HistotreeSettings> | null;
-    const historyDays =
-      stored?.historyDays === "1" ||
-      stored?.historyDays === "7" ||
-      stored?.historyDays === "30" ||
-      stored?.historyDays === "365"
-        ? stored.historyDays
-        : defaultSettings.historyDays;
+export const defaultTheme: Theme = "system";
 
-    return { historyDays };
-  } catch {
-    return defaultSettings;
-  }
+const settingsItem = storage.defineItem<HistotreeSettings>("local:histotree-settings", {
+  fallback: defaultSettings,
+});
+
+export const themeItem = storage.defineItem<Theme>("local:vite-ui-theme", {});
+
+const settingsPromise = (async (): Promise<HistotreeSettings> => {
+  const stored = await settingsItem.getValue();
+  const historyDays =
+    stored.historyDays === 1 ||
+    stored.historyDays === 7 ||
+    stored.historyDays === 30 ||
+    stored.historyDays === 365
+      ? stored.historyDays
+      : defaultSettings.historyDays;
+
+  return { historyDays };
+})();
+
+export function loadSettings(): Promise<HistotreeSettings> {
+  return settingsPromise;
 }
 
-export function saveSettings(settings: HistotreeSettings) {
-  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+export async function saveSettings(settings: HistotreeSettings) {
+  await settingsItem.setValue(settings);
 }
