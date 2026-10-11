@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Graph from "graphology";
 import Sigma from "sigma";
-import { ExternalLink, Moon, RefreshCw, Search, Sun } from "lucide-react";
+import { ExternalLink, Moon, RefreshCw, Search, Settings, Sun } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/components/theme-provider";
 import { buildEdges } from "@/lib/edge-scoring";
 import { loadHistoryPages, type HistoryPage } from "@/lib/history";
+import { loadSettings, type HistoryDays } from "@/lib/settings";
 
 const colors = ["#8b5cf6", "#06b6d4", "#f97316", "#22c55e", "#ec4899", "#eab308"];
 const POPUP_ENTRY_LIMIT = 10;
@@ -50,7 +51,7 @@ function App({ fullPage = false }: AppProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<Sigma | null>(null);
   const [entries, setEntries] = useState<HistoryPage[]>([]);
-  const [days, setDays] = useState("7");
+  const [days, setDays] = useState<HistoryDays>(() => loadSettings().historyDays);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -333,6 +334,17 @@ function App({ fullPage = false }: AppProps) {
             ) : (
               <Moon data-icon="inline-start" />
             )}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() =>
+              void browser.tabs.create({ url: browser.runtime.getURL("/options.html") })
+            }
+            title="設定"
+            aria-label="設定"
+          >
+            <Settings data-icon="inline-start" />
           </Button>
         </div>
       </header>
