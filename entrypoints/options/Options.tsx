@@ -28,7 +28,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTheme } from "@/components/theme-provider";
-import { defaultSettings, loadSettings, saveSettings, type HistoryDays } from "@/lib/settings";
+import {
+  defaultSettings,
+  loadSettings,
+  saveSettings,
+  type HistoryDays,
+  type HistoryLimit,
+} from "@/lib/settings";
 
 const historyDayOptions: { value: HistoryDays; label: string }[] = [
   { value: 1, label: "今日" },
@@ -36,11 +42,19 @@ const historyDayOptions: { value: HistoryDays; label: string }[] = [
   { value: 30, label: "30日間" },
   { value: 365, label: "1年間" },
 ];
+const historyLimitOptions: { value: HistoryLimit; label: string }[] = [
+  { value: 160, label: "160サイト" },
+  { value: 300, label: "300サイト" },
+  { value: 500, label: "500サイト" },
+  { value: 700, label: "700サイト" },
+  { value: 1000, label: "1000サイト" },
+];
 
 function Options() {
   const { theme, setTheme } = useTheme();
   const settings = use(loadSettings());
   const [historyDays, setHistoryDays] = useState<HistoryDays>(settings.historyDays);
+  const [historyLimit, setHistoryLimit] = useState<HistoryLimit>(settings.historyLimit);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
   const updateHistoryDays = async (value: string | null) => {
@@ -53,13 +67,36 @@ function Options() {
     ) {
       return;
     }
-    const nextSettings = { historyDays: nextHistoryDays as HistoryDays };
+    const nextSettings = {
+      historyDays: nextHistoryDays as HistoryDays,
+      historyLimit,
+    };
     setHistoryDays(nextSettings.historyDays);
+    await saveSettings(nextSettings);
+  };
+
+  const updateHistoryLimit = async (value: string | null) => {
+    const nextHistoryLimit = Number(value);
+    if (
+      nextHistoryLimit !== 160 &&
+      nextHistoryLimit !== 300 &&
+      nextHistoryLimit !== 500 &&
+      nextHistoryLimit !== 700 &&
+      nextHistoryLimit !== 1000
+    ) {
+      return;
+    }
+    const nextSettings = {
+      historyDays,
+      historyLimit: nextHistoryLimit as HistoryLimit,
+    };
+    setHistoryLimit(nextSettings.historyLimit);
     await saveSettings(nextSettings);
   };
 
   const resetSettings = async () => {
     setHistoryDays(defaultSettings.historyDays);
+    setHistoryLimit(defaultSettings.historyLimit);
     await saveSettings(defaultSettings);
     await setTheme("system");
   };
@@ -147,6 +184,23 @@ function Options() {
                   <SelectContent>
                     {historyDayOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="mt-5 flex flex-col gap-2">
+                <label htmlFor="history-limit" className="text-sm font-medium">
+                  読み込むサイト数
+                </label>
+                <Select value={String(historyLimit)} onValueChange={updateHistoryLimit}>
+                  <SelectTrigger id="history-limit" className="w-full sm:w-[260px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {historyLimitOptions.map((option) => (
+                      <SelectItem key={option.value} value={String(option.value)}>
                         {option.label}
                       </SelectItem>
                     ))}

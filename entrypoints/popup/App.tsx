@@ -120,7 +120,7 @@ function App({ fullPage = false }: AppProps) {
         await loadHistoryPages(browser.history, {
           text: fullPage ? query.trim() : "",
           startTime,
-          maxResults: 160,
+          maxResults: Math.max(POPUP_ENTRY_LIMIT, settings.historyLimit),
         })
       ).sort((a, b) => (b.lastVisitTime ?? 0) - (a.lastVisitTime ?? 0));
 
@@ -157,7 +157,7 @@ function App({ fullPage = false }: AppProps) {
     } finally {
       setLoading(false);
     }
-  }, [days, fullPage, query]);
+  }, [days, fullPage, query, settings.historyLimit]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadHistory(), 0);
