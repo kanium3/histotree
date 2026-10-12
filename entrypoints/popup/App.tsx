@@ -50,6 +50,43 @@ type GraphNode = {
   pageIndex?: number;
 };
 
+function resolveNodeOverlaps(positions: Map<string, { x: number; y: number }>, nodes: GraphNode[]) {
+  const minimumDistance = 8;
+  for (let iteration = 0; iteration < 60; iteration += 1) {
+    let moved = false;
+    for (let leftIndex = 0; leftIndex < nodes.length; leftIndex += 1) {
+      const left = nodes[leftIndex];
+      const leftPosition = left ? positions.get(left.id) : undefined;
+      if (!left || !leftPosition) continue;
+
+      for (let rightIndex = leftIndex + 1; rightIndex < nodes.length; rightIndex += 1) {
+        const right = nodes[rightIndex];
+        const rightPosition = right ? positions.get(right.id) : undefined;
+        if (!right || !rightPosition) continue;
+
+        const deltaX = rightPosition.x - leftPosition.x;
+        const deltaY = rightPosition.y - leftPosition.y;
+        const distance = Math.hypot(deltaX, deltaY);
+        if (distance >= minimumDistance) continue;
+
+        const angle =
+          distance === 0
+            ? ((leftIndex * 31 + rightIndex * 17) % 360) * (Math.PI / 180)
+            : Math.atan2(deltaY, deltaX);
+        const push = (minimumDistance - distance) / 2;
+        const offsetX = Math.cos(angle) * push;
+        const offsetY = Math.sin(angle) * push;
+        leftPosition.x -= offsetX;
+        leftPosition.y -= offsetY;
+        rightPosition.x += offsetX;
+        rightPosition.y += offsetY;
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+}
+
 type AppProps = {
   fullPage?: boolean;
 };
@@ -225,6 +262,7 @@ function App({ fullPage = false }: AppProps) {
       placeBranch(node.id, undefined, 0, -Math.PI / 2, Math.PI * 2, centerX, centerY);
       componentIndex += 1;
     }
+    resolveNodeOverlaps(positions, graphNodes);
 
     graphNodes.forEach((node, index) => {
       const position = positions.get(node.id) ?? { x: index * 2, y: 0 };
