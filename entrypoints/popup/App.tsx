@@ -34,6 +34,22 @@ function pageLabel(entry: HistoryPage) {
   }
 }
 
+function siteLabel(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "") || "Unknown site";
+  } catch {
+    return "Unknown site";
+  }
+}
+
+type GraphNode = {
+  id: string;
+  label: string;
+  url?: string;
+  kind: "site" | "page";
+  pageIndex?: number;
+};
+
 type AppProps = {
   fullPage?: boolean;
 };
@@ -117,9 +133,45 @@ function App({ fullPage = false }: AppProps) {
 
     const graph = new Graph();
     const pageMap = new Map(entries.map((entry) => [entry.id, entry]));
-    const edges = buildEdges(entries);
+    const siteNodes = new Map<string, GraphNode>();
+    const graphNodes: GraphNode[] = [];
+    const siteEdges: Array<{ source: string; target: string }> = [];
+    for (const [pageIndex, entry] of entries.entries()) {
+      const hostname = siteLabel(entry.url);
+      const siteId = `site:${hostname}`;
+      if (!siteNodes.has(siteId)) {
+        siteNodes.set(siteId, {
+          id: siteId,
+          label: hostname,
+          url: entry.url,
+          kind: "site",
+        });
+        graphNodes.push(siteNodes.get(siteId)!);
+      }
+      graphNodes.push({
+        id: entry.id,
+        label: pageLabel(entry),
+        url: entry.url,
+        kind: "page",
+        pageIndex,
+      });
+      siteEdges.push({ source: siteId, target: entry.id });
+    }
+
+    const pageEdges = buildEdges(entries);
+    const edges = [
+      ...siteEdges.map((edge) => ({
+        ...edge,
+        score: 0.5,
+        reference: 0,
+        temporal: 0,
+        semantic: 0,
+        site: true,
+      })),
+      ...pageEdges.map((edge) => ({ ...edge, site: false })),
+    ];
     const neighbors = new Map<string, string[]>();
-    for (const entry of entries) neighbors.set(entry.id, []);
+    for (const node of graphNodes) neighbors.set(node.id, []);
     for (const edge of edges) {
       neighbors.set(edge.source, [...(neighbors.get(edge.source) ?? []), edge.target]);
       neighbors.set(edge.target, [...(neighbors.get(edge.target) ?? []), edge.source]);
@@ -127,7 +179,7 @@ function App({ fullPage = false }: AppProps) {
 
     const positions = new Map<string, { x: number; y: number }>();
     const placed = new Set<string>();
-    const entryIndex = new Map(entries.map((entry, index) => [entry.id, index]));
+    const nodeIndex = new Map(graphNodes.map((node, index) => [node.id, index]));
     const radialSpacing = 5;
     let componentIndex = 0;
 
@@ -149,7 +201,7 @@ function App({ fullPage = false }: AppProps) {
 
       const children = (neighbors.get(node) ?? [])
         .filter((candidate) => candidate !== parent && !placed.has(candidate))
-        .sort((left, right) => (entryIndex.get(left) ?? 0) - (entryIndex.get(right) ?? 0));
+        .sort((left, right) => (nodeIndex.get(left) ?? 0) - (nodeIndex.get(right) ?? 0));
       if (children.length === 0) return;
 
       const childSweep = sweep / children.length;
@@ -166,33 +218,40 @@ function App({ fullPage = false }: AppProps) {
       });
     };
 
-    for (const entry of entries) {
-      if (placed.has(entry.id)) continue;
+    for (const node of graphNodes) {
+      if (placed.has(node.id)) continue;
       const centerX = componentIndex === 0 ? 0 : componentIndex * radialSpacing * 4;
       const centerY = componentIndex === 0 ? 0 : 0;
-      placeBranch(entry.id, undefined, 0, -Math.PI / 2, Math.PI * 2, centerX, centerY);
+      placeBranch(node.id, undefined, 0, -Math.PI / 2, Math.PI * 2, centerX, centerY);
       componentIndex += 1;
     }
 
-    entries.forEach((entry, index) => {
-      const position = positions.get(entry.id) ?? { x: index * 2, y: 0 };
-      graph.addNode(entry.id, {
+    graphNodes.forEach((node, index) => {
+      const position = positions.get(node.id) ?? { x: index * 2, y: 0 };
+      graph.addNode(node.id, {
         x: position.x,
         y: position.y,
-        size: Math.min(16, 7 + (entry.visitCount ?? 1)),
-        color: isDark
-          ? (colors[index % colors.length] ?? "#8b5cf6")
-          : (["#6d28d9", "#0e7490", "#c2410c", "#15803d", "#be185d", "#a16207"][
-              index % colors.length
-            ] ?? "#6d28d9"),
-        label: pageLabel(entry),
+        size:
+          node.kind === "site"
+            ? 13
+            : Math.min(16, 7 + (entries[node.pageIndex ?? 0]?.visitCount ?? 1)),
+        color:
+          node.kind === "site"
+            ? themeColors.node
+            : isDark
+              ? (colors[(node.pageIndex ?? index) % colors.length] ?? "#8b5cf6")
+              : (["#6d28d9", "#0e7490", "#c2410c", "#15803d", "#be185d", "#a16207"][
+                  (node.pageIndex ?? index) % colors.length
+                ] ?? "#6d28d9"),
+        label: node.label,
       });
     });
     for (const edge of edges) {
       graph.addEdge(edge.source, edge.target, {
-        size: Math.max(1, edge.score * 2),
-        color: edge.reference ? "#635b88" : themeColors.edge,
+        size: edge.site ? 1.5 : Math.max(1, edge.score * 2),
+        color: edge.site ? themeColors.node : edge.reference ? "#635b88" : themeColors.edge,
         score: edge.score,
+        site: edge.site,
       });
     }
 
@@ -241,7 +300,7 @@ function App({ fullPage = false }: AppProps) {
     renderer.on("clickNode", ({ node }) => setSelected(node));
     renderer.on("clickStage", () => setSelected(null));
     renderer.on("doubleClickNode", ({ node }) => {
-      const page = pageMap.get(node);
+      const page = pageMap.get(node) ?? siteNodes.get(node);
       if (page?.url) void browser.tabs.create({ url: page.url });
     });
     return () => {
