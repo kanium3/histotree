@@ -103,6 +103,7 @@ function App({ fullPage = false }: AppProps) {
   };
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<Sigma | null>(null);
+  const hoveredRef = useRef<string | null>(null);
   const settings = use(loadSettings());
   const [entries, setEntries] = useState<HistoryPage[]>([]);
   const [days, setDays] = useState<HistoryDays>(settings.historyDays);
@@ -337,6 +338,14 @@ function App({ fullPage = false }: AppProps) {
     rendererRef.current = renderer;
     renderer.on("clickNode", ({ node }) => setSelected(node));
     renderer.on("clickStage", () => setSelected(null));
+    renderer.on("enterNode", ({ node }) => {
+      hoveredRef.current = node;
+      renderer.refresh();
+    });
+    renderer.on("leaveNode", () => {
+      hoveredRef.current = null;
+      renderer.refresh();
+    });
     renderer.on("doubleClickNode", ({ node }) => {
       const page = pageMap.get(node) ?? siteNodes.get(node);
       if (page?.url) void browser.tabs.create({ url: page.url });
@@ -363,15 +372,21 @@ function App({ fullPage = false }: AppProps) {
     if (!renderer) return;
     renderer.setSetting("nodeReducer", (node, data) => {
       const isSelected = node === selected;
+      const isHovered = node === hoveredRef.current;
       return {
         ...data,
         hidden: Boolean(
           selected && !isSelected && !renderer.getGraph().neighbors(node).includes(selected),
         ),
         highlighted: isSelected && !isDark,
-        ...(!isDark &&
-          isSelected && {
-            color: themeColors.selectedBackground,
+        ...(isSelected && {
+          color: isDark ? data.color : themeColors.selectedBackground,
+          labelColor: themeColors.selectedLabel,
+          labelBackground: themeColors.selectedBackground,
+        }),
+        ...(isHovered &&
+          !isSelected &&
+          isDark && {
             labelColor: themeColors.selectedLabel,
             labelBackground: themeColors.selectedBackground,
           }),
