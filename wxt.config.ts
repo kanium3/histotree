@@ -9,12 +9,17 @@ export default defineConfig({
     name: "Histotree",
     description: "Browse your history as a network graph.",
     permissions: ["history", "storage", "tabs"],
+    browser_specific_settings: {
+        gecko: {
+            id: "histotree@kanium.me"
+        }
+    }
   },
   vite: () => ({
     plugins: [tailwindcss()],
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "./"), // or "./src" if using src directory
+        "@": path.resolve(__dirname, "./"),
       },
     },
   }),
