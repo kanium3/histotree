@@ -10,10 +10,10 @@ export default defineConfig({
     description: "Browse your history as a network graph.",
     permissions: ["history", "storage", "tabs"],
     browser_specific_settings: {
-        gecko: {
-            id: "histotree@kanium.me"
-        }
-    }
+      gecko: {
+        id: "histotree@kanium.me",
+      },
+    },
   },
   vite: () => ({
     plugins: [tailwindcss()],
