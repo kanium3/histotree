@@ -2,6 +2,9 @@
 
 [English](#about-histotree) | [日本語](#histotreeについて)
 
+![Sceen Shot of histotree](https://github.com/user-attachments/assets/9bbbecca-5164-4d23-93a9-7a995404c6b2)
+![Sceen Shot of histotree in focusing a node](https://github.com/user-attachments/assets/a96b103b-5b0f-4830-a8b4-f8f0d78513d6)
+
 ## About Histotree
 
 View browser history as an interactive network graph powered by Sigma.js.
