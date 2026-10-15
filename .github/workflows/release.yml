@@ -64,7 +64,6 @@ jobs:
 
       - name: Create Release
         run: |
-          gh release create ${{ github.ref_name }} --generate-notes temp/extensions/histotree-${{ env.VERSION }}-firefox.zip \
-          temp/extensions/histotree-${{ env.VERSION }}-chrome.zip
+          gh release create ${{ github.ref_name }} --generate-notes temp/extensions/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
