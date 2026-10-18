@@ -13,8 +13,8 @@ export default defineConfig({
       gecko: {
         id: "histotree@kanium.me",
         data_collection_permissions: {
-            required: ["none"]
-        }
+          required: ["none"],
+        },
       },
     },
   },
