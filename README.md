@@ -1,5 +1,7 @@
 # Histotree
 
+![Mozilla Add-on Version](https://img.shields.io/amo/v/histotree)
+
 [English](#about-histotree) | [日本語](#histotreeについて)
 
 ![Sceen Shot of histotree](https://github.com/user-attachments/assets/9bbbecca-5164-4d23-93a9-7a995404c6b2)
